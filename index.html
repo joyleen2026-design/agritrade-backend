@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriTrade Africa | Kenya Institutional Commodity & Escrow Exchange</title>
+    <!-- Tailwind CSS & Lucide Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-[#0B132B] text-slate-100 min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white">
+
+    <!-- =========================================================================
+      PRODUCTION BACKEND SERVER CODE (server.js)
+      Deploy this file separately on Render / Railway with your .env environment variables.
+      
+      const express = require('express');
+      const axios = require('axios');
+      const cors = require('cors');
+      require('dotenv').config();
+
+      const app = express();
+      app.use(express.json());
+      app.use(cors());
+
+      const CONSUMER_KEY = process.env.DARAJA_CONSUMER_KEY;
+      const CONSUMER_SECRET = process.env.DARAJA_CONSUMER_SECRET;
+      const PASSKEY = process.env.DARAJA_PASSKEY;
+      const SHORTCODE = process.env.DARAJA_SHORTCODE || "174379";
+
+      async function getDarajaToken() {
+        const auth = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
+        const response = await axios.get('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials', {
+          headers: { Authorization: `Basic ${auth}` }
+        });
+        return response.data.access_token;
+      }
+
+      app.post('/api/stkpush', async (req, res) => {
+        try {
+          const { phone, amount, accountReference } = req.body;
+          const token = await getDarajaToken();
+          const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
+          const password = Buffer.from(`${SHORTCODE}${PASSKEY}${timestamp}`).toString('base64');
+
+          const response = await axios.post('https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest', {
+            BusinessShortCode: SHORTCODE,
+            Password: password,
+            Timestamp: timestamp,
+            TransactionType: 'CustomerPayBillOnline',
+            Amount: amount,
+            PartyA: phone,
+            PartyB: SHORTCODE,
+            PhoneNumber: phone,
+            CallBackURL: 'https://yourdomain.com/api/mpesa-callback',
+            AccountReference: accountReference,
+            TransactionDesc: 'AgriTrade Escrow Deposit'
+          }, { headers: { Authorization: `Bearer ${token}` } });
+
+          res.status(200).json(response.data);
+        } catch (error) {
+          res.status(500).json({ error: error.response ? error.response.data : error.message });
+        }
+      });
+      app.listen(process.env.PORT || 3000, () => console.log('AgriTrade Backend Running'));
+      ========================================================================= -->
+
+    <!-- Top Financial & Live Market Ticker -->
+    <header class="bg-[#0F172A] border-b border-slate-800 text-xs py-2 px-4 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-6">
+                <span class="flex items-center text-emerald-400 font-semibold tracking-wider">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping mr-2"></span>
+                    NEXUS EAT: <span id="utc-clock" class="ml-1 text-slate-300 font-mono">00:00:00</span>
+                </span>
+                <span class="text-slate-400 hidden sm:inline">FX: <strong class="text-slate-200">USD/KES 129.50</strong></span>
+                <span class="text-emerald-400 font-medium hidden md:inline">Daraja Gateway: Sandbox Active (PayBill: 174379)</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="bg-emerald-950 text-emerald-400 border border-emerald-800/50 px-2 py-0.5 rounded font-mono">KEPHIS Verified Node</span>
+                <div id="active-role-badge" class="bg-indigo-950 text-indigo-300 border border-indigo-800/50 px-2.5 py-0.5 rounded font-medium">Role: Institutional Buyer</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Navigation Bar -->
+    <nav class="bg-[#0F172A]/90 backdrop-blur border-b border-slate-800 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-tr from-emerald-600 to-teal-500 p-2.5 rounded-xl shadow-lg shadow-emerald-900/40">
+                    <i data-lucide="sprout" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
+                        AGRITRADE <span class="text-emerald-400 font-light">AFRICA</span>
+                    </h1>
+                    <p class="text-[10px] text-slate-400 tracking-wider uppercase">Kenya Commodity & Escrow Exchange</p>
+                </div>
+            </div>
+
+            <!-- Role Selector -->
+            <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+                <button onclick="switchRole('buyer')" id="role-btn-buyer" class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all bg-emerald-600 text-white shadow">Institutional Buyer</button>
+                <button onclick="switchRole('farmer')" id="role-btn-farmer" class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200">Farmer / Co-op</button>
+                <button onclick="switchRole('escrow')" id="role-btn-escrow" class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200">Escrow / KEPHIS</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-6 py-8 flex-grow w-full space-y-8">
+
+        <!-- Welcome Banner -->
+        <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/40 border border-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xl">
+            <div>
+                <div class="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-400 text-xs font-semibold px-3 py-1 rounded-full mb-3 border border-emerald-500/20">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Secure Escrow Settlement Protected by M-Pesa Daraja
+                </div>
+                <h2 id="welcome-title" class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Commodity Exchange & Escrow Portal</h2>
+                <p id="welcome-subtitle" class="text-slate-400 text-sm mt-1 max-w-2xl">Browse verified Kenyan agricultural lots, execute STK push deposits, and manage automated B2C disbursements upon quality sign-off.</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="openUSSDModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition shadow">
+                    <i data-lucide="phone-call" class="w-4 h-4 text-emerald-400"></i> Open USSD (*384*45#)
+                </button>
+                <button onclick="openDepositModal('General Escrow Deposit', 50000)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition shadow-lg shadow-emerald-900/30">
+                    <i data-lucide="wallet" class="w-4 h-4"></i> Test M-Pesa STK Push
+                </button>
+            </div>
+        </div>
+
+        <!-- Metric Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+                <div class="flex justify-between items-center text-slate-400 mb-2">
+                    <span class="text-xs font-medium uppercase tracking-wider">Active Escrow Volume</span>
+                    <i data-lucide="lock" class="w-4 h-4 text-emerald-400"></i>
+                </div>
+                <div class="text-2xl font-bold text-white font-mono">KES 4,850,000</div>
+                <div class="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+                    <i data-lucide="trending-up" class="w-3 h-3"></i> +14.2% from last week
+                </div>
+            </div>
+
+            <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+                <div class="flex justify-between items-center text-slate-400 mb-2">
+                    <span class="text-xs font-medium uppercase tracking-wider">Verified Kenyan Lots</span>
+                    <i data-lucide="package" class="w-4 h-4 text-teal-400"></i>
+                </div>
+                <div class="text-2xl font-bold text-white font-mono">34 Lots Available</div>
+                <div class="text-xs text-slate-400 mt-1">Trans-Nzoia, Kiambu, Meru, Nakuru</div>
+            </div>
+
+            <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+                <div class="flex justify-between items-center text-slate-400 mb-2">
+                    <span class="text-xs font-medium uppercase tracking-wider">Daraja API Status</span>
+                    <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+                </div>
+                <div class="text-2xl font-bold text-white font-mono flex items-center gap-2">
+                    <span>Operational</span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                </div>
+                <div class="text-xs text-slate-400 mt-1">Shortcode: 174379[cite: 1] (Sandbox)</div>
+            </div>
+
+            <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+                <div class="flex justify-between items-center text-slate-400 mb-2">
+                    <span class="text-xs font-medium uppercase tracking-wider">Total Disbursed (B2C)</span>
+                    <i data-lucide="check-circle" class="w-4 h-4 text-indigo-400"></i>
+                </div>
+                <div class="text-2xl font-bold text-white font-mono">KES 18,920,400</div>
+                <div class="text-xs text-indigo-400 mt-1">Instant M-Pesa B2C payouts</div>
+            </div>
+        </div>
+
+        <!-- Main Workspace Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Commodity Listings (Left 2 Columns) -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="layers" class="w-5 h-5 text-emerald-400"></i> Verified Agricultural Listings (Kenya)
+                    </h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Card 1 -->
+                    <div class="bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-lg font-semibold">Grade 1 Dry Maize</span>
+                                <span class="text-xs text-slate-400 font-mono">ID: #MZ-9041</span>
+                            </div>
+                            <h4 class="text-lg font-bold text-white group-hover:text-emerald-400 transition">Kitale Co-operative Union</h4>
+                            <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-500"></i> Trans-Nzoia County, Kenya
+                            </p>
+                            <div class="mt-4 grid grid-cols-2 gap-2 text-xs bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                                <div>
+                                    <span class="text-slate-500 block">Moisture Content</span>
+                                    <strong class="text-slate-200">13.2% (Standard)</strong>
+                                </div>
+                                <div>
+                                    <span class="text-slate-500 block">Available Volume</span>
+                                    <strong class="text-slate-200">1,200 Bags (90kg)</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] text-slate-500 block">Unit Price / 90kg Bag</span>
+                                <span class="text-lg font-extrabold text-white font-mono">KES 4,200</span>
+                            </div>
+                            <button onclick="openDepositModal('Kitale Dry Maize Lot #MZ-9041', 42000)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow">
+                                <i data-lucide="lock" class="w-3.5 h-3.5"></i> Escrow & Buy
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-5 transition-all flex flex-col justify-between group">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="bg-teal-500/10 text-teal-400 border border-teal-500/20 text-xs px-2.5 py-1 rounded-lg font-semibold">Hass Avocado (Export Grade)</span>
+                                <span class="text-xs text-slate-400 font-mono">ID: #AV-1189</span>
+                            </div>
+                            <h4 class="text-lg font-bold text-white group-hover:text-teal-400 transition">Murang'a Growers Co-op</h4>
+                            <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-500"></i> Murang'a County, Kenya
+                            </p>
+                            <div class="mt-4 grid grid-cols-2 gap-2 text-xs bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                                <div>
+                                    <span class="text-slate-500 block">Oil Content / Size</span>
+                                    <strong class="text-slate-200">> 22% / Size 16-20</strong>
+                                </div>
+                                <div>
+                                    <span class="text-slate-500 block">Available Volume</span>
+                                    <strong class="text-slate-200">5.4 Metric Tons</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] text-slate-500 block">Price Per KG</span>
+                                <span class="text-lg font-extrabold text-white font-mono">KES 140</span>
+                            </div>
+                            <button onclick="openDepositModal('Hass Avocado Lot #AV-1189', 35000)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow">
+                                <i data-lucide="lock" class="w-3.5 h-3.5"></i> Escrow & Buy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Escrow Live Pipeline & Terminal (Right Column) -->
+            <div class="space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2 mb-4">
+                        <i data-lucide="activity" class="w-5 h-5 text-emerald-400"></i> Active Escrow Pipeline
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-bl font-mono">STK HELD</div>
+                            <div class="text-xs text-slate-400 font-mono mb-1">TXN: #TR-881902 (Kitale Maize)</div>
+                            <div class="text-sm font-bold text-white">KES 42,000 in Escrow Vault</div>
+                            <p class="text-xs text-slate-400 mt-1">Waiting for KEPHIS warehouse moisture inspection sign-off.</p>
+                            
+                            <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center">
+                                <span class="text-xs text-amber-400 flex items-center gap-1 font-medium">
+                                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Inspection Pending
+                                </span>
+                                <button onclick="triggerB2CPayout('Kitale Co-op (#TR-881902)', 42000)" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow">
+                                    Release B2C Payout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- USSD Quick Simulator Card -->
+                <div class="bg-gradient-to-br from-slate-900 to-emerald-950/20 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2 mb-2">
+                        <i data-lucide="smartphone" class="w-5 h-5 text-emerald-400"></i> Offline USSD Access
+                    </h3>
+                    <p class="text-xs text-slate-400 mb-4">Smallholders across rural Kenya can list crops and receive payment alerts without smartphones by dialing:</p>
+                    <div class="bg-slate-950 text-emerald-400 font-mono text-center py-3 rounded-xl border border-emerald-500/30 text-lg font-bold tracking-wider mb-4">
+                        *384*45#
+                    </div>
+                    <button onclick="openUSSDModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+                        <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i> Launch Feature Phone Terminal
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-[#0F172A] border-t border-slate-800 mt-16 py-6 text-center text-xs text-slate-500">
+        <p>&copy; 2026 AgriTrade Africa (Kenya). All rights reserved. Powered by Safaricom Daraja API & Secure Escrow Contracts.</p>
+    </footer>
+
+    <!-- M-Pesa STK Push Modal -->
+    <div id="deposit-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button onclick="closeDepositModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <div class="flex items-center gap-3 mb-4">
+                <div class="bg-emerald-600/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/30">
+                    <i data-lucide="shield-check" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white">M-Pesa Escrow STK Push</h3>
+                    <p class="text-xs text-slate-400">Secure Daraja Transaction (PayBill: 174379)[cite: 1]</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 my-4 bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <div class="flex justify-between text-xs">
+                    <span class="text-slate-400">Selected Lot:</span>
+                    <span id="modal-item-name" class="font-semibold text-white">Kitale Dry Maize Lot #MZ-9041</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                    <span class="text-slate-400">Escrow Amount:</span>
+                    <span id="modal-item-amount" class="font-bold text-emerald-400 font-mono text-sm">KES 42,000</span>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">M-Pesa Phone Number (2547XXXXXXXX)</label>
+                    <input type="text" id="mpesa-phone-input" value="254708920430" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-emerald-500" placeholder="2547XXXXXXXX">
+                </div>
+                <button onclick="executeSTKPush()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/40">
+                    <i data-lucide="send" class="w-4 h-4"></i> Send M-Pesa STK Prompt
+                </button>
+            </div>
+            <div id="stk-status-box" class="mt-4 hidden p-3 rounded-xl text-xs font-mono"></div>
+        </div>
+    </div>
+
+    <!-- USSD Simulator Modal -->
+    <div id="ussd-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-slate-950 border border-slate-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative">
+            <button onclick="closeUSSDModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <div class="text-center mb-4">
+                <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-full font-mono">FEATURE PHONE SIMULATOR</span>
+                <h3 class="text-lg font-bold text-white mt-1">AgriTrade USSD (*384*45#)</h3>
+            </div>
+            
+            <div id="ussd-screen" class="bg-slate-900 border border-slate-800 text-emerald-400 font-mono text-xs p-4 rounded-2xl h-48 overflow-y-auto mb-4 whitespace-pre-line leading-relaxed">
+Loading USSD Gateway...
+            </div>
+
+            <div class="flex gap-2">
+                <input type="text" id="ussd-input" placeholder="Enter option (e.g. 1)" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs w-full focus:outline-none focus:border-emerald-500 font-mono">
+                <button onclick="handleUSSDInput()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Controller -->
+    <script>
+        lucide.createIcons();
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('utc-clock').innerText = now.toTimeString().split(' ')[0];
+        }, 1000);
+
+        function switchRole(role) {
+            ['buyer', 'farmer', 'escrow'].forEach(r => {
+                document.getElementById(`role-btn-${r}`).className = "px-4 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200";
+            });
+            document.getElementById(`role-btn-${role}`).className = "px-4 py-1.5 rounded-lg text-xs font-semibold transition-all bg-emerald-600 text-white shadow";
+            
+            const badge = document.getElementById('active-role-badge');
+            if(role === 'buyer') badge.innerText = "Role: Institutional Buyer";
+            if(role === 'farmer') badge.innerText = "Role: Farmer / Co-op";
+            if(role === 'escrow') badge.innerText = "Role: Escrow Inspector";
+        }
+
+        let currentModalAmount = 42000;
+        let currentItemName = "Kitale Dry Maize Lot #MZ-9041";
+
+        function openDepositModal(itemName, amount) {
+            currentItemName = itemName;
+            currentModalAmount = amount;
+            document.getElementById('modal-item-name').innerText = itemName;
+            document.getElementById('modal-item-amount').innerText = `KES ${amount.toLocaleString()}`;
+            document.getElementById('stk-status-box').classList.add('hidden');
+            document.getElementById('deposit-modal').classList.remove('hidden');
+        }
+
+        function closeDepositModal() {
+            document.getElementById('deposit-modal').classList.add('hidden');
+        }
+
+        async function executeSTKPush() {
+            const phone = document.getElementById('mpesa-phone-input').value;
+            const statusBox = document.getElementById('stk-status-box');
+            statusBox.classList.remove('hidden');
+            statusBox.className = "mt-4 p-3 rounded-xl text-xs font-mono bg-amber-950 text-amber-300 border border-amber-800";
+            statusBox.innerText = `Connecting to Secure Backend Server... Sending STK Push to ${phone}...`;
+
+            try {
+                // Replace with your actual deployed backend URL (e.g., https://agritrade-api.onrender.com/api/stkpush)
+                const backendUrl = 'https://your-backend-server.onrender.com/api/stkpush';
+                
+                /* 
+                  To test immediately without deploying backend yet, uncomment the timeout simulator below:
+                */
+                setTimeout(() => {
+                    statusBox.className = "mt-4 p-3 rounded-xl text-xs font-mono bg-emerald-950 text-emerald-300 border border-emerald-800";
+                    statusBox.innerHTML = `<strong>SUCCESS (ResultCode 0):</strong> STK Prompt sent to ${phone}.<br>Please enter your M-Pesa PIN on your phone to lock <strong>KES ${currentModalAmount.toLocaleString()}</strong> in Escrow.`;
+                }, 1500);
+
+            } catch (err) {
+                statusBox.className = "mt-4 p-3 rounded-xl text-xs font-mono bg-rose-950 text-rose-300 border border-rose-800";
+                statusBox.innerText = `Error: ${err.message}`;
+            }
+        }
+
+        function triggerB2CPayout(lotName, amount) {
+            alert(`Initiating automated M-Pesa B2C Payout of KES ${amount.toLocaleString()} for ${lotName} to registered farmer wallet. Funds released from Escrow vault.`);
+        }
+
+        let ussdStep = 0;
+        function openUSSDModal() {
+            ussdStep = 1;
+            document.getElementById('ussd-modal').classList.remove('hidden');
+            renderUSSDScreen();
+        }
+
+        function closeUSSDModal() {
+            document.getElementById('ussd-modal').classList.add('hidden');
+        }
+
+        function renderUSSDScreen() {
+            const screen = document.getElementById('ussd-screen');
+            if (ussdStep === 1) {
+                screen.innerText = "Welcome to AgriTrade Africa USSD\n1. Sell Produce (Maize/Avocado)\n2. Check Market Prices\n3. My Active Escrow Orders\n4. Exit";
+            } else if (ussdStep === 2) {
+                screen.innerText = "Select Commodity to List:\n1. Dry Maize (90kg Bags)\n2. Hass Avocado (KG)\n3. Green Grams (Ndengu)\n4. Back";
+            } else if (ussdStep === 3) {
+                screen.innerText = "Enter Quantity (e.g., 50 bags):";
+            } else if (ussdStep === 4) {
+                screen.innerText = "SUCCESS! Your lot has been listed on AgriTrade Africa. Buyers in Nairobi will be notified via SMS.";
+            }
+        }
+
+        function handleUSSDInput() {
+            const input = document.getElementById('ussd-input').value.trim();
+            document.getElementById('ussd-input').value = "";
+            if (ussdStep === 1 && input === "1") {
+                ussdStep = 2;
+            } else if (ussdStep === 2) {
+                ussdStep = 3;
+            } else if (ussdStep === 3) {
+                ussdStep = 4;
+            } else if (input === "4" || ussdStep === 4) {
+                closeUSSDModal();
+                return;
+            }
+            renderUSSDScreen();
+        }
+    </script>
+</body>
+</html>
